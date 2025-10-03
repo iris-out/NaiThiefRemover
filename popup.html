@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>다운로드 설정</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: sans-serif; width: 340px; padding: 0; background-color: #2E3440; color: #D8DEE9; }
+        
+        /* 탭 스타일 */
+        .tabs { display: flex; border-bottom: 1px solid #4C566A; }
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: #D8DEE9;
+            flex-grow: 1;
+            text-align: center;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #3B4252;
+            border-bottom: 2px solid #88C0D0;
+        }
+        .tab-content { padding: 15px; display: none; }
+        .tab-content.active { display: block; }
+
+        /* 기존 설정 요소 스타일 */
+        h2 { color: #88C0D0; text-align: center; margin-bottom: 20px; font-size: 1.2em; }
+        label { display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: bold; color: #E5E9F0; }
+        input[type="text"], input[type="number"], select { width: calc(100% - 22px); padding: 8px 10px; margin-bottom: 15px; border: 1px solid #4C566A; border-radius: 5px; background-color: #3B4252; color: #D8DEE9; }
+        input[type="range"] { width: 100%; }
+        .help-text { font-size: 0.8em; color: #81A1C1; margin-top: -10px; margin-bottom: 15px; }
+        .settings-group { margin-bottom: 20px; border-top: 1px solid #4C566A; padding-top: 15px; }
+        .checkbox-container { display: flex; align-items: center; margin-bottom: 15px; }
+        .checkbox-container label { display: inline; margin-bottom: 0px; margin-left: 5px; }
+        .checkbox-container input { width: auto; margin: 0; }
+        .button-group { display: flex; gap: 10px; }
+        button { flex-grow: 1; padding: 10px; border: none; border-radius: 5px; color: #ECEFF4; cursor: pointer; transition: background-color 0.2s; }
+        #saveBtn { background-color: #81C1B2; }
+        #resetBtn { background-color: #BF616A; }
+        #saveBtn:hover { background-color: #5E81AC; }
+        #resetBtn:hover { background-color: #a9545d; }
+        .status { margin-top: 15px; text-align: center; font-size: 0.9em; min-height: 1.2em; color: #A3BE8C; }
+
+        /* 로그 스타일 */
+        #log-display {
+            background-color: #3B4252;
+            border: 1px solid #4C566A;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            font-size: 0.8em;
+            color: #D8DEE9;
+            margin-bottom: 15px;
+        }
+        .log-entry { margin-bottom: 5px; white-space: pre-wrap; word-break: break-all; }
+        .log-entry.error { color: #BF616A; }
+        .log-entry.success { color: #A3BE8C; }
+        .log-entry.warn { color: #EBCB8B; }
+
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <button class="tab-button active" data-tab="settings">설정</button>
+        <button class="tab-button" data-tab="log">로그</button>
+        <button class="tab-button" data-tab="history">내역</button>
+    </div>
+
+    <div id="settings" class="tab-content active">
+        <h2>다운로드 설정</h2>
+
+        <div class="settings-group">
+            <label for="filename">파일 이름 형식:</label>
+            <input type="text" id="filename" name="filename">
+            <p class="help-text">사용 가능: {timestamp}, {date}, {time}, {index} (프롬프트/시드 기능은 삭제됨)</p>
+            
+            <label for="subDir">하위 폴더 (선택 사항):</label>
+            <input type="text" id="subDir" placeholder="예: characters/luna">
+            <p class="help-text">브라우저 기본 다운로드 폴더 아래에 새 폴더를 생성합니다. 'A/B' 입력 시 다중 폴더 생성됩니다.</p>
+        </div>
+
+        <div class="settings-group">
+            <label for="format">이미지 포맷:</label>
+            <select id="format">
+                <option value="jpeg">JPEG</option>
+                <option value="webp">WebP</option>
+                <option value="png">PNG</option>
+            </select>
+
+            <label for="quality">품질 (JPEG/WebP): <span id="qualityVal">1.00</span></label>
+            <input type="range" id="quality" min="0.1" max="1.0" step="0.01" value="1.0">
+        </div>
+        
+        <div class="settings-group">
+             <label for="autoCount">자동 반복 생성 횟수 (0: 수동):</label>
+             <input type="number" id="autoCount" min="0" value="0">
+
+             <label for="loadDelay">버튼 감시/로딩 대기 시간 (ms):</label>
+             <input type="number" id="loadDelay" min="50" value="500">
+             <p class="help-text">생성 완료 여부(버튼 활성화)를 확인하는 간격입니다. (500ms 권장)</p>
+
+             <label for="repeatDelay">반복 생성 사이 대기 시간 (ms):</label>
+             <input type="number" id="repeatDelay" min="100" value="1000">
+             <p class="help-text">다운로드 후 다음 생성 버튼을 누를 때까지 기다리는 시간입니다.</p>
+        </div>
+        
+        <div class="settings-group">
+             <div class="checkbox-container">
+                <input type="checkbox" id="showButtons" name="showButtons" checked>
+                <label for="showButtons">좌측 상단 다운로드 버튼 표시</label>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="showProgress" name="showProgress" checked>
+                <label for="showProgress">자동 진행률 표시</label>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="saveBtn">설정 저장</button>
+            <button id="resetBtn">초기화</button>
+        </div>
+        <div id="status" class="status"></div>
+    </div>
+
+    <div id="log" class="tab-content">
+        <h2>실행 로그</h2>
+        <div id="log-display">로그 로딩 중...</div>
+        <button id="clearLogBtn" style="background-color: #BF616A;">로그 비우기</button>
+    </div>
+    
+    <div id="history" class="tab-content">
+        <h2>다운로드 내역</h2>
+        <p class="help-text">여기에 다운로드된 이미지 정보가 표시됩니다. (현재 비활성화)</p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
