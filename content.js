@@ -112,39 +112,125 @@
 
     // 다운로드 처리 함수
     async function downloadItem(img, index) {
-        if (!img.src) return;
+    if (!img.src) return;
+    
+    try {
+        const baseFilename = generateFilename(settings.filename, index);
         
-        try {
-            const baseFilename = generateFilename(settings.filename, index);
-            
-            // 1. 단 하위 폴더 경로 구성을 하고
-            let folderPath = '';
-            if (settings.subDir) {
-                folderPath = settings.subDir.replace(/\\/g, '/').trim();
-                folderPath = folderPath.replace(/^\/+|\/+$/g, '');
-                
-                if (folderPath) {
-                    folderPath = folderPath + '/';
-                }
+        let folderPath = '';
+        if (settings.subDir) {
+            folderPath = settings.subDir.replace(/\\/g, '/').trim();
+            folderPath = folderPath.replace(/^\/+|\/+$/g, '');
+            if (folderPath) {
+                folderPath = folderPath + '/';
             }
+        }
+        
+        // 모든 이미지를 최고 품질 JPEG로 변환하여 메타데이터를 제거합니다.
+        const originalImage = new Image();
+        originalImage.crossOrigin = 'anonymous';
+        
+        const jpegDataUrl = await new Promise((resolve, reject) => {
+            originalImage.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = originalImage.naturalWidth;
+                canvas.height = originalImage.naturalHeight;
+                ctx.drawImage(originalImage, 0, 0);
+
+                try {
+                    // 1차 변환: 메타데이터 제거를 위해 최고 품질 JPEG로 강제 변환
+                    const tempJpegUrl = canvas.toDataURL('image/jpeg', 1.0); 
+                    resolve(tempJpegUrl);
+                } catch (e) {
+                    logMessage(`1차 JPEG 변환 실패. 원본 URL 다운로드 시도: ${e.message}`, "error");
+                    resolve(img.src);
+                }
+            };
             
-            const fileExtension = settings.format; 
-            // 최종 다운로드 파일 경로: 폴더 경로 + 파일명 + 확장자
-            const finalPath = `${folderPath}${baseFilename}.${fileExtension}`;
-            // 2. 걸 백그라운드 스크립트에 다운로드 요청을 보냄.
-            chrome.runtime.sendMessage({
+            originalImage.onerror = (e) => {
+                logMessage(`원본 이미지 로드 실패. 원본 URL 다운로드 시도.`, "error");
+                resolve(img.src);
+            };
+            
+            originalImage.src = img.src;
+        });
+
+        if (!jpegDataUrl.startsWith('data:image/jpeg')) {
+             // 1차 변환이 실패했으면 원본 URL로 다운로드 요청을 보냅니다.
+             showMsg("메타데이터 제거 실패. 원본 URL로 다운로드합니다.", "warn");
+             
+             chrome.runtime.sendMessage({
                 action: "download",
                 url: img.src,
-                filename: finalPath 
-            });
-
-            logMessage(`다운로드 요청 전송 완료: ${finalPath}`, "success");
-            
-        } catch (e) {
-            showMsg('다운로드 요청 전송 중 뭔가 잘못됐습니다. 만든 사람한테 이 에러를 보내주시면 수정할수도.', 'error');
-            console.error('Download Request Error:', e);
+                filename: `${folderPath}${baseFilename}.${img.src.split('.').pop().split('?')[0]}` 
+             });
+             return;
         }
+
+
+        const finalFormat = settings.format.toLowerCase();
+        let finalMimeType;
+        let finalQuality = settings.quality;
+
+        switch(finalFormat) {
+            case 'jpeg':
+                finalMimeType = 'image/jpeg'; 
+                break;
+            case 'webp':
+                finalMimeType = 'image/webp';
+                break;
+            case 'png':
+                finalMimeType = 'image/png'; // PNG는 품질 설정 무시됨
+                finalQuality = 1.0; 
+                break;
+            default:
+                finalMimeType = 'image/jpeg';
+                finalQuality = 1.0;
+        }
+
+        const finalDataUrl = await new Promise((resolve, reject) => {
+            // 1차 변환된 JPEG Data URL을 다시 Image 객체로 로드합니다.
+            const tempImage = new Image();
+            tempImage.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tempImage.naturalWidth;
+                canvas.height = tempImage.naturalHeight;
+                ctx.drawImage(tempImage, 0, 0);
+                
+                try {
+                    // 2차 변환: 최종 포맷으로 변환
+                    const resultDataUrl = canvas.toDataURL(finalMimeType, finalQuality);
+                    resolve(resultDataUrl);
+                } catch (e) {
+                    logMessage(`2차 변환 실패. 1차 JPEG URL로 다운로드 시도: ${e.message}`, "error");
+                    resolve(jpegDataUrl); // 2차 실패 시, 1차 JPEG라도 저장
+                }
+            };
+            tempImage.onerror = () => {
+                logMessage('1차 변환된 JPEG 로드 실패. 1차 JPEG URL로 다운로드 시도.', "error");
+                resolve(jpegDataUrl);
+            };
+            tempImage.src = jpegDataUrl; // 1차 변환된 JPEG Data URL을 로드
+        });
+
+        // 최종 다운로드 요청 전송
+        const finalPath = `${folderPath}${baseFilename}.${finalFormat}`;
+        
+        chrome.runtime.sendMessage({
+            action: "download",
+            url: finalDataUrl, 
+            filename: finalPath 
+        });
+
+        logMessage(`다운로드 요청 전송 완료: ${finalPath} (2단계 변환 완료)`, "success");
+        
+    } catch (e) {
+        showMsg('다운로드 요청 전송 중 심각한 오류 발생.', 'error');
+        console.error('Download Request Error:', e);
     }
+}
 
     // 생성된 이미지 다운로드 함수
     function downloadVisible() {
