@@ -17,15 +17,21 @@
         loadDelay: 500, // 이미지 로딩/완료 확인 대기 시간 (ms)
         repeatDelay: 1000 // 반복 생성 사이 대기 시간 (ms)
     };
+    
+    // UI 위치 및 상태 저장 변수 (isExpanded 상태 추가)
+    let containerPosition = { top: 20, left: 20, isExpanded: true }; 
 
     // 자동 다운로드 관리 객체
     let autoDownloader = null; 
     let lastDownloadImageSrc = null; 
+    
     // 아이콘 SVG (내장)
     const SVG_ICONS = {
         DOWNLOAD: '&#x21E9;', 
         PLAY: '<svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em"><path d="M6 3l12 9-12 9V3z"/></svg>', 
-        PAUSE: '<svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+        PAUSE: '<svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+        TOGGLE_IN: '&#x25C0;', // < (접기 아이콘)
+        TOGGLE_OUT: '&#x25B6;' // > (펴기 아이콘)
     };
 
     function logMessage(message, type = "info") { // 로그 메시지 저장 및 콘솔 출력
@@ -333,7 +339,7 @@
             }
         };
         
-        // 생성 버튼 클릭 후 이미지 생성 완료를 감시하는 타이머를 시작합니다. -> 이미지 생성이 완료되면, 버튼이 다시 활성화 되는 것을 ㅇㅇ이용함.
+        // 생성 버튼 클릭 후 이미지 생성 완료를 감시하는 타이머를 시작합니다. -> 이미지 생성이 완료되면, 버튼이 다시 활성화 되는 것을 이용함.
         this.startCheckLoop = function() {
             self.clearInterval(); 
 
@@ -396,12 +402,21 @@
     }
 
     // 다운로드 버튼 UI 생성 함수
-    function createButton() {
+    async function createButton() {
         let container = document.getElementById(CONTAINER_ID);
         if (container) {
             container.remove();
         }
         
+        // 1. 저장된 위치 및 상태 불러오기
+        const data = await new Promise(resolve => {
+            chrome.storage.sync.get('containerPosition', resolve);
+        });
+        if (data.containerPosition) {
+            // 기존 값 (top, left)은 유지하고 isExpanded만 업데이트되도록 병합
+            containerPosition = { ...containerPosition, ...data.containerPosition }; 
+        }
+
         if (!settings.showButtons) {
             logMessage("설정에 따라 다운로드 버튼을 표시하지 않습니다.");
             return;
@@ -409,24 +424,45 @@
 
         container = document.createElement('div');
         container.id = CONTAINER_ID;
-        const btnSize = '39.6px'; 
+        const btnSize = '39.6px'; // 일반 버튼의 크기
+        const toggleBtnHeight = `${parseFloat(btnSize) * 0.6}px`; // 💡 토글 버튼 높이: 39.6px * 0.6 = 23.76px
         const fontSize = '20px'; 
         
         Object.assign(container.style, {
-            position: 'fixed', top: '20px', left: '20px', zIndex: '9999', 
+            position: 'fixed', 
+            top: `${containerPosition.top}px`, // 저장된 위치 적용
+            left: `${containerPosition.left}px`, // 저장된 위치 적용
+            zIndex: '9999', 
             display: 'flex', flexDirection: 'column', gap: '5px', 
-            backgroundColor: '#3B4252', padding: '8px', 
-            borderRadius: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+            backgroundColor: '#3B4252', 
+            padding: '10px', // 높이 증가를 위해 10px로 변경
+            borderRadius: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+            cursor: 'grab' // 드래그 가능 표시
         });
 
+        // 버튼들을 담을 내부 컨테이너 (토글 시 숨겨질 부분)
+        const innerButtonContainer = document.createElement('div');
+        Object.assign(innerButtonContainer.style, {
+            display: containerPosition.isExpanded ? 'flex' : 'none', // 초기 상태 적용
+            flexDirection: 'column', 
+            gap: '5px'
+        });
+        
+        // =========================================================================
+        // 2. 토글 버튼 로직 및 UI 추가
+        // =========================================================================
+        
         // 버튼 생성 헬퍼 함수
-        function createStyledButton(html, bgColor, clickHandler, id = '') {
+        function createStyledButton(html, bgColor, clickHandler, id = '', isToggle = false) {
             const btn = document.createElement('button');
             if (id) btn.id = id;
             btn.innerHTML = html; 
             Object.assign(btn.style, { 
-                width: btnSize, height: btnSize, borderRadius: '8px', 
-                backgroundColor: bgColor, color: 'white', border: 'none', 
+                width: btnSize, 
+                height: isToggle ? toggleBtnHeight : btnSize, // 💡 토글 버튼의 높이 적용
+                borderRadius: '8px', 
+                backgroundColor: bgColor, 
+                color: 'white', border: 'none', 
                 cursor: 'pointer', fontSize: fontSize, 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
                 transition: 'background-color 0.2s', flexShrink: 0
@@ -435,6 +471,32 @@
             return btn;
         }
 
+        // 토글 기능 함수 정의
+        const toggleUI = () => {
+            containerPosition.isExpanded = !containerPosition.isExpanded;
+            
+            // UI 상태 반영: innerButtonContainer 표시/숨김
+            innerButtonContainer.style.display = containerPosition.isExpanded ? 'flex' : 'none';
+            
+            // 토글 버튼 아이콘 변경
+            toggleBtn.innerHTML = containerPosition.isExpanded ? SVG_ICONS.TOGGLE_IN : SVG_ICONS.TOGGLE_OUT;
+
+            // 상태 저장
+            chrome.storage.sync.set({ containerPosition }, () => {
+                logMessage(`UI 토글 상태 저장 완료: ${containerPosition.isExpanded ? '펼침' : '접힘'}`, "info");
+            });
+        };
+
+        // 토글 버튼 (가장 위에 배치될 버튼)
+        const toggleBtn = createStyledButton(
+            containerPosition.isExpanded ? SVG_ICONS.TOGGLE_IN : SVG_ICONS.TOGGLE_OUT, 
+            '#4C566A', 
+            toggleUI, // 토글 기능 연결
+            'toggle-expand-btn',
+            true // 💡 isToggle 플래그
+        );
+        container.appendChild(toggleBtn); // 가장 먼저 추가
+        
         // 수동 다운로드 버튼
         const manualBtn = createStyledButton(
             SVG_ICONS.DOWNLOAD, 
@@ -443,7 +505,7 @@
         );
         manualBtn.onmouseover = () => manualBtn.style.backgroundColor = '#81A1C1';
         manualBtn.onmouseout = () => manualBtn.style.backgroundColor = '#5E81AC';
-        container.appendChild(manualBtn);
+        innerButtonContainer.appendChild(manualBtn); 
         
         // 자동 다운로드 토글 버튼
         const autoBtn = createStyledButton(
@@ -465,7 +527,121 @@
             },
             'auto-download-btn'
         );
-        container.appendChild(autoBtn);
+        innerButtonContainer.appendChild(autoBtn); 
+        
+        // innerButtonContainer를 주 컨테이너에 추가
+        container.appendChild(innerButtonContainer);
+
+
+        // =========================================================================
+        // 3. 드래그 로직 (마우스 드래그 활성화, 조건부 허용)
+        // =========================================================================
+        
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        // 드래그 시작 함수 (마우스/터치 공통)
+        const dragStart = (e) => {
+            // 💡 마우스 이벤트의 경우, 이 함수를 호출하기 전에 이미 예외 처리를 합니다.
+            
+            isDragging = true;
+            container.style.cursor = 'grabbing';
+            container.style.transition = 'none'; // 드래그 중에는 transition 비활성화
+
+            // 이벤트에 따라 시작 위치와 초기 컨테이너 위치 설정
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            startX = clientX;
+            startY = clientY;
+            initialX = container.offsetLeft;
+            initialY = container.offsetTop;
+            
+            e.preventDefault(); // 기본 드래그 방지
+        };
+
+        // 드래그 이동 함수 (마우스/터치 공통)
+        const dragMove = (e) => {
+            if (!isDragging) return;
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            let newLeft = initialX + dx;
+            let newTop = initialY + dy;
+            
+            // 화면 밖으로 나가지 않도록 경계 설정 
+            const maxLeft = window.innerWidth - container.offsetWidth - 10;
+            const maxTop = window.innerHeight - container.offsetHeight - 10;
+            
+            newLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            newTop = Math.max(10, Math.min(newTop, maxTop));
+
+
+            container.style.left = `${newLeft}px`;
+            container.style.top = `${newTop}px`;
+            
+            e.preventDefault(); 
+        };
+
+        // 드래그 종료 함수 (마우스/터치 공통)
+        const dragEnd = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            container.style.cursor = 'grab';
+            container.style.transition = ''; // transition 다시 활성화
+
+            // 최종 위치 저장 (토글 상태도 함께 저장됨)
+            containerPosition.left = container.offsetLeft;
+            containerPosition.top = container.offsetTop;
+            
+            chrome.storage.sync.set({ containerPosition }, () => {
+                logMessage(`UI 위치 저장 완료: (T: ${containerPosition.top}, L: ${containerPosition.left}, E: ${containerPosition.isExpanded})`, "info");
+            });
+
+            // 마우스 이벤트 리스너 제거
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+        };
+        
+        // 💡 마우스 이벤트 리스너: 드래그 조건을 만족할 때만 dragStart 실행
+        container.addEventListener('mousedown', (e) => {
+             const targetId = e.target.id;
+
+             // 1. UI가 접혀있고, 클릭 대상이 펼치기 버튼일 때만 드래그 허용 (토글 기능 오버라이드)
+             if (targetId === 'toggle-expand-btn' && !containerPosition.isExpanded) {
+                dragStart(e);
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('mouseup', dragEnd);
+             }
+             // 2. 토글 버튼 외의 영역(다른 버튼이나 패딩 영역)을 클릭했을 때 드래그 시작
+             else if (targetId !== 'toggle-expand-btn' && targetId !== 'auto-download-btn') {
+                // 'auto-download-btn'도 눌렀을 때 드래그되지 않도록 추가 예외 처리
+                dragStart(e);
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('mouseup', dragEnd);
+             }
+             
+             // 3. 토글 버튼 외의 기능성 버튼 (manualBtn)의 경우, dragStart를 호출하지 않아야
+             //    클릭 이벤트가 정상 실행되고 드래그가 발생하지 않습니다.
+        });
+        
+        // 터치 이벤트 리스너 (스마트폰/태블릿 고려)
+        container.addEventListener('touchstart', (e) => {
+             // 💡 터치 드래그는 토글 버튼을 누르는 경우에도 드래그로 해석되는 경우가 많아, 
+             // 현재는 항상 드래그 가능하도록 이전 로직을 유지합니다.
+             dragStart(e);
+        });
+        // document에서 터치 이벤트 리스너를 한 번만 추가
+        document.removeEventListener('touchmove', dragMove); // 중복 방지
+        document.removeEventListener('touchend', dragEnd); // 중복 방지
+        document.addEventListener('touchmove', dragMove, { passive: false }); 
+        document.addEventListener('touchend', dragEnd);
+
 
         document.body.appendChild(container);
         logMessage("다운로드 버튼 UI 생성 완료.", "success");
@@ -488,7 +664,7 @@
         });
 
         // 2. 버튼 생성 
-        createButton();
+        await createButton();
         
         // 3. 설정 변경 감지 리스너 
         chrome.storage.onChanged.addListener((changes) => {
