@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>다운로드 설정</title>
+    <meta charset="UTF-8">
+    <style>
+                :root {
+                    --bg: #121621;
+                    --surface: rgba(25, 31, 45, 0.85);
+                    --surface-alt: rgba(32, 40, 57, 0.85);
+                    --border: rgba(136, 160, 192, 0.2);
+                    --text: #E5ECFF;
+                    --text-muted: rgba(197, 206, 232, 0.7);
+                    --accent: #6CA6FF;
+                    --accent-strong: #347DFF;
+                    --danger: #FF6B84;
+                    --radius-lg: 18px;
+                    --radius-md: 12px;
+                }
+        
+                * {
+                    box-sizing: border-box;
+                }
+        
+                body {
+                    font-family: "Inter", "Apple SD Gothic Neo", "Helvetica Neue", sans-serif;
+                    width: 380px;
+                    height: 580px;
+                    margin: 0;
+                    padding: 8px;
+                    background: radial-gradient(circle at top, #1a2234 0%, #0d101a 100%);
+                    color: var(--text);
+                    overflow: hidden;
+                }
+        
+                .popup {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    height: 100%;
+                }
+        
+                .tab-bar {
+                    display: flex;
+                    gap: 4px;
+                    background: rgba(19, 22, 33, 0.75);
+                    padding: 3px;
+                    border-radius: 999px;
+                    box-shadow: 0 6px 14px rgba(10, 12, 20, 0.32);
+                }
+        
+                .tab-button {
+                    flex: 1;
+                    border: none;
+                    border-radius: 999px;
+                    padding: 5px 8px;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    background: transparent;
+                    color: var(--text-muted);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+        
+                .tab-button.active {
+                    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+                    color: #0d1322;
+                    box-shadow: 0 4px 14px rgba(76, 132, 255, 0.35);
+                }
+        
+                .tab-button:focus-visible {
+                    outline: 2px solid var(--accent);
+                    outline-offset: 2px;
+                }
+        
+                .tab-content {
+                    display: none;
+                    flex-direction: column;
+                    flex: 1 1 auto;
+                    min-height: 0;
+                    padding: 12px;
+                    background: var(--surface);
+                    border-radius: var(--radius-lg);
+                    border: 1px solid var(--border);
+                    backdrop-filter: blur(14px);
+                    box-shadow: 0 12px 24px rgba(8, 12, 24, 0.4);
+                    overflow-y: auto;
+                }
+        
+                .tab-content.active {
+                    display: flex;
+                }
+        
+                h2.tab-title {
+                    margin: 0 0 10px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: var(--text);
+                    flex-shrink: 0;
+                }
+                
+                #history.tab-content,
+                #log.tab-content {
+                    display: none;
+                    flex-direction: column;
+                    flex: 1 1 auto;
+                    min-height: 0;
+                }
+                
+                #history.tab-content.active,
+                #log.tab-content.active {
+                    display: flex;
+                }
+        
+                .form-grid {
+                    display: grid;
+                    gap: 12px;
+                }
+        
+                label {
+                    display: block;
+                    margin-bottom: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: rgba(229, 236, 255, 0.92);
+                }
+        
+                input[type="text"],
+                input[type="number"],
+                select {
+                    width: 100%;
+                    padding: 8px 10px;
+                    border-radius: var(--radius-md);
+                    border: 1px solid rgba(116, 140, 190, 0.25);
+                    background: var(--surface-alt);
+                    color: var(--text);
+                    outline: none;
+                    font-size: 0.85rem;
+                    transition: border 0.2s ease, box-shadow 0.2s ease;
+                }
+        
+                input[type="text"]:focus,
+                input[type="number"]:focus,
+                select:focus {
+                    border: 1px solid rgba(120, 164, 255, 0.75);
+                    box-shadow: 0 0 0 3px rgba(120, 164, 255, 0.15);
+                }
+                
+                .keyword-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+                .keyword-btn { background-color: #3a4254; color: var(--text-muted); padding: 3px 7px; font-size: 11px; border: none; border-radius: 5px; cursor: pointer; }
+                .keyword-btn:hover { background-color: #4f596d; color: var(--text); }
+        
+                input[type="range"] {
+                    width: 100%;
+                    accent-color: var(--accent);
+                }
+        
+                .checkbox-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 10px;
+                    border-radius: var(--radius-md);
+                    background: var(--surface-alt);
+                    border: 1px solid rgba(116, 140, 190, 0.2);
+                }
+        
+                .checkbox-row input {
+                    width: auto;
+                    accent-color: var(--accent);
+                    transform: scale(1.05);
+                }
+        
+                .help-text {
+                    margin: 6px 0 0;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                }
+        
+                .button-group {
+                    display: flex;
+                    gap: 8px;
+                    margin-top: 8px;
+                }
+        
+                button.primary {
+                    flex: 1;
+                    border: none;
+                    border-radius: var(--radius-md);
+                    padding: 10px 0;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+                    color: #0d1322;
+                    cursor: pointer;
+                    box-shadow: 0 8px 18px rgba(76, 132, 255, 0.35);
+                    transition: transform 0.18s ease, box-shadow 0.18s ease;
+                }
+        
+                button.primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 14px 24px rgba(76, 132, 255, 0.45);
+                }
+        
+                button.secondary {
+                    flex: 1;
+                    border: none;
+                    border-radius: var(--radius-md);
+                    padding: 10px 0;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    background: rgba(84, 96, 130, 0.45);
+                    color: var(--text);
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                }
+        
+                button.secondary:hover {
+                    background: rgba(118, 130, 166, 0.6);
+                }
+        
+                .status {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    padding: 10px 16px;
+                    background: rgba(28, 36, 54, 0.95);
+                    color: #84f0c2;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                    border-radius: 12px;
+                    border: 1px solid rgba(108, 138, 210, 0.25);
+                    box-shadow: 0 8px 24px rgba(6, 10, 22, 0.4);
+                    backdrop-filter: blur(16px);
+                    min-height: 1.2em;
+                    opacity: 0;
+                    transform: translateY(-10px);
+                    transition: opacity 0.3s ease, transform 0.3s ease;
+                    pointer-events: none;
+                    max-width: 300px;
+                    word-break: break-word;
+                }
+                
+                .status:not(:empty) {
+                    opacity: 1;
+                    transform: translateY(0);
+                    pointer-events: auto;
+                }
+        
+                .history-controls,
+                .log-controls {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 8px;
+                    flex-shrink: 0;
+                }
+        
+                .tertiary {
+                    flex: 1;
+                    padding: 8px;
+                    border-radius: var(--radius-md);
+                    border: 1px solid rgba(116, 140, 190, 0.25);
+                    background: transparent;
+                    color: var(--text);
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 0.8rem;
+                    transition: border 0.2s ease, background 0.2s ease;
+                }
+        
+                .tertiary:hover {
+                    border-color: rgba(120, 164, 255, 0.75);
+                    background: rgba(120, 164, 255, 0.08);
+                }
+        
+                .danger {
+                    border-color: rgba(255, 107, 132, 0.55);
+                    color: var(--danger);
+                }
+        
+                .danger:hover {
+                    background: rgba(255, 107, 132, 0.08);
+                }
+        
+                .history-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    flex: 1 1 auto;
+                    min-height: 0;
+                    overflow-y: auto;
+                    padding-right: 4px;
+                }
+        
+                .history-card {
+                    padding: 10px;
+                    border-radius: var(--radius-md);
+                    background: var(--surface-alt);
+                    border: 1px solid rgba(116, 140, 190, 0.25);
+                }
+        
+                .history-card-header {
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-bottom: 6px;
+                }
+        
+                .history-card-body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    font-size: 0.8rem;
+                    color: rgba(220, 230, 255, 0.9);
+                    line-height: 1.5;
+                }
+        
+                .history-section h3 {
+                    margin: 0 0 5px;
+                    font-size: 0.82rem;
+                    font-weight: 600;
+                    color: rgba(176, 194, 236, 0.95);
+                }
+        
+                .history-section p {
+                    margin: 0;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+        
+                .history-meta-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                    gap: 8px;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                }
+                .meta-item { display: flex; flex-direction: column; }
+                .meta-item-label { font-weight: 600; color: rgba(176, 194, 236, 0.95); }
+                .meta-item-value { word-break: break-all; }
+        
+                .artist-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+                .artist-tag { background-color: #3a4254; color: var(--text-muted); padding: 2px 6px; font-size: 11px; border-radius: 5px; }
+        
+                .metadata-details {
+                    margin-top: 10px;
+                    border-radius: var(--radius-md);
+                    background: rgba(15, 22, 34, 0.6);
+                    border: 1px solid rgba(116, 140, 190, 0.2);
+                    overflow: hidden;
+                }
+        
+                .metadata-details summary {
+                    cursor: pointer;
+                    padding: 8px 10px;
+                    font-weight: 600;
+                    font-size: 0.8rem;
+                    list-style: none;
+                }
+        
+                .metadata-details summary::-webkit-details-marker {
+                    display: none;
+                }
+        
+                .metadata-chunk {
+                    padding: 8px 10px;
+                    border-top: 1px solid rgba(116, 140, 190, 0.15);
+                }
+        
+                .metadata-chunk h4 {
+                    margin: 0 0 4px;
+                    font-size: 0.75rem;
+                    color: rgba(180, 198, 240, 0.9);
+                    font-weight: 600;
+                }
+        
+                .metadata-chunk p {
+                    margin: 0;
+                    font-size: 0.7rem;
+                    color: var(--text-muted);
+                    word-break: break-word;
+                }
+        
+                #log-display {
+                    background: rgba(12, 17, 30, 0.55);
+                    border: 1px solid rgba(116, 140, 190, 0.3);
+                    border-radius: var(--radius-md);
+                    flex: 1 1 auto;
+                    min-height: 0;
+                    overflow-y: auto;
+                    padding: 10px;
+                    font-size: 0.75rem;
+                    color: rgba(220, 230, 255, 0.85);
+                }
+        
+                .log-entry {
+                    margin-bottom: 5px;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+        
+                .log-entry.error { color: #ff8fa3; }
+                .log-entry.success { color: #6ef5c7; }
+                .log-entry.warn { color: #ffd47d; }
+        
+                .empty-state {
+                    padding: 12px;
+                    border-radius: var(--radius-md);
+                    background: rgba(12, 17, 30, 0.55);
+                    border: 1px dashed rgba(116, 140, 190, 0.35);
+                    color: var(--text-muted);
+                    text-align: center;
+                    font-size: 0.8rem;
+                }
+                
+                .help-section { margin-bottom: 16px; }
+                .help-section h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 6px; }
+                .help-section p { font-size: 0.8rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 8px; }
+                .help-section code { background-color: var(--surface-alt); padding: 2px 5px; border-radius: 5px; font-size: 0.75rem; }
+                .help-section ul { list-style: none; padding-left: 0; }
+                .help-section li { margin-bottom: 6px; }
+        
+        #analytics-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .analytics-section h3 {
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+        }
+        .analytics-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .analytics-list-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            background: var(--surface-alt);
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+        .analytics-item-label {
+            word-break: break-all;
+            margin-right: 10px;
+        }
+        .analytics-item-count {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .storage-section {
+            background: var(--surface-alt);
+            padding: 10px;
+            border-radius: var(--radius-md);
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: rgba(15, 22, 34, 0.6);
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+            border-radius: 999px;
+            transition: width 0.5s ease-out;
+        }
+        .storage-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition-duration: 0.01ms !important;
+                animation-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="popup">
+        <nav class="tab-bar">
+            <button class="tab-button active" data-tab="basic">설정</button>
+            <button class="tab-button" data-tab="history">생성 내역</button>
+            <button class="tab-button" data-tab="log">로그</button>
+            <button class="tab-button" data-tab="help">도움말</button>
+            <button class="tab-button" data-tab="analytics">분석</button>
+        </nav>
+
+        <section id="basic" class="tab-content active">
+            <h2 class="tab-title">기본 설정</h2>
+            <div class="form-grid">
+                <div>
+                    <label for="filename">파일 이름 형식</label>
+                    <input type="text" id="filename" name="filename" placeholder="{timestamp}_{index}">
+                    <div class="keyword-buttons" data-target-input="filename">
+                        <button class="keyword-btn" data-keyword="{timestamp}">타임스탬프</button>
+                        <button class="keyword-btn" data-keyword="{date}">날짜</button>
+                        <button class="keyword-btn" data-keyword="{time}">시간</button>
+                        <button class="keyword-btn" data-keyword="{index}">번호</button>
+                        <button class="keyword-btn" data-keyword="{model}">모델</button>
+                        <button class="keyword-btn" data-keyword="{prompt}">프롬프트</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="subDir">하위 폴더 (선택 사항)</label>
+                    <input type="text" id="subDir" placeholder="예: NAI/{model}">
+                     <div class="keyword-buttons" data-target-input="subDir">
+                        <button class="keyword-btn" data-keyword="{date}">날짜</button>
+                        <button class="keyword-btn" data-keyword="{model}">모델</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="format">이미지 포맷</label>
+                    <select id="format">
+                        <option value="jpeg">JPEG</option>
+                        <option value="webp">WebP</option>
+                        <option value="png">PNG</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="quality">품질 (JPEG / WebP): <span id="qualityVal">1.00</span></label>
+                    <input type="range" id="quality" min="0.1" max="1.0" step="0.01" value="1.0">
+                </div>
+
+                <div>
+                    <label for="autoCount">자동 반복 생성 횟수 (0은 수동)</label>
+                    <input type="number" id="autoCount" min="0" value="0">
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showButtons" name="showButtons" checked>
+                    <label for="showButtons">퀵 다운로드 버튼 표시</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showProgress" name="showProgress" checked>
+                    <label for="showProgress">자동 다운로드 진행률 표시</label>
+                </div>
+                 <div>
+                    <label for="loadDelay">이미지 생성 후 대기 (ms)</label>
+                    <input type="number" id="loadDelay" min="50" value="500">
+                </div>
+                <div>
+                    <label for="repeatDelay">반복 생성 사이 대기 시간 (ms)</label>
+                    <input type="number" id="repeatDelay" min="100" value="1000">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="saveBtn" class="primary">설정 저장</button>
+                <button id="resetBtn" class="secondary">기본값 복원</button>
+            </div>
+            <div id="status" class="status"></div>
+        </section>
+
+        <section id="help" class="tab-content">
+            <h2 class="tab-title">도움말</h2>
+            <div class="help-section">
+                <h3>파일 이름 및 경로 설정</h3>
+                <p>파일 이름과 하위 폴더 경로에 아래 키워드를 사용하여 동적으로 값을 지정할 수 있습니다. 버튼을 클릭하면 해당 키워드가 입력창에 추가됩니다.</p>
+                <ul>
+                    <li><code>{timestamp}</code>: 현재 시간의 타임스탬프 (예: 1672531200000)</li>
+                    <li><code>{date}</code>: 오늘 날짜 (예: 2025-11-13)</li>
+                    <li><code>{time}</code>: 현재 시간 (예: 142030)</li>
+                    <li><code>{index}</code>: 다운로드 순서 번호 (예: 01, 02...)</li>
+                    <li><code>{model}</code>: 이미지 생성에 사용된 모델 이름</li>
+                    <li><code>{prompt}</code>: 프롬프트 내용의 일부 (최대 40자)</li>
+                </ul>
+                <p><b>예시:</b><br>하위 폴더: <code>NAI/{date}/{model}</code><br>파일 이름: <code>{time}_{prompt}</code><br>결과: <code>NAI/2025-11-13/Anime V4/142030_masterpiece....png</code></p>
+            </div>
+            <div class="help-section">
+                <h3>자동 다운로드</h3>
+                <p>'자동 반복 횟수'를 1 이상으로 설정하면, 페이지의 컨트롤 패널에서 자동 다운로드를 시작할 수 있습니다. 이미지 생성 버튼을 자동으로 누르고, 생성이 완료되면 다운로드하는 과정을 설정한 횟수만큼 반복합니다.</p>
+            </div>
+             <div class="help-section">
+                <h3>기타</h3>
+                <button id="resetUiPositionBtn" class="secondary">UI 위치 초기화</button>
+                <p class="help-text" style="margin-top: 8px;">컨트롤 패널의 위치를 초기화합니다.</p>
+            </div>
+        </section>
+
+        <section id="history" class="tab-content">
+            <h2 class="tab-title">생성 내역</h2>
+            <div class="history-controls">
+                <input type="text" id="prompt-search" placeholder="프롬프트 검색..." class="tertiary" style="flex-grow: 2;">
+                <button id="refreshHistoryBtn" class="tertiary">새로고침</button>
+                <button id="clearHistoryBtn" class="tertiary danger">내역 비우기</button>
+            </div>
+            <div id="history-cards" class="history-list">
+                <div class="empty-state">아직 저장된 메타데이터가 없습니다.</div>
+            </div>
+        </section>
+
+        <section id="log" class="tab-content">
+            <h2 class="tab-title">실행 로그</h2>
+            <div class="log-controls">
+                <button id="refreshLogBtn" class="tertiary">새로고침</button>
+                <button id="clearLogBtn" class="tertiary danger">로그 비우기</button>
+            </div>
+            <div id="log-display">로그 로딩 중...</div>
+        </section>
+
+        <section id="analytics" class="tab-content">
+            <h2 class="tab-title">분석</h2>
+            <div id="analytics-content">
+                <div id="storage-analytics"></div>
+                <!-- 분석 내용은 JS로 채워집니다. -->
+                <div class="empty-state">분석할 데이터가 부족합니다.</div>
+            </div>
+        </section>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

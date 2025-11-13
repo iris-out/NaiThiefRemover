@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "NaiThiefRemover",
+  "version": "2.0",
+  "description": "NovelAI 이미지 자동 / 수동 다운로더",
+  "permissions": ["activeTab", "storage", "downloads"],
+  "host_permissions": ["*://novelai.net/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://novelai.net/image/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "scripts/constants.js",
+        "scripts/storage.js",
+        "scripts/metadata.js",
+        "scripts/ui.js"
+      ],
+      "matches": ["*://novelai.net/*"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
