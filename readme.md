@@ -1,7 +1,7 @@
 # NaiThiefRemover: NovelAI 이미지 안전 다운로더
 
 ![NaiThiefRemover](r1.png)
-
+![NaiThiefRemover](r2.png)
 NovelAI에서 이미지를 제작한 후, 다운로드를 받을 때 이미지 내부에 시드나 프롬프트 등등의 데이터가 같이 딸려오게 됩니다.
 
 이러한 이미지를 온라인에 공유할 경우, 여러분이 제작한 이미지들의 프롬프트를 타인이 취득 후 사용할 수 있습니다.
