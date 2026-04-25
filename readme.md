@@ -1,4 +1,12 @@
-# NaiThiefRemover: NovelAI 이미지 안전 다운로더
+## OUTDATED - NaiThiefRemover
+![iris-out/naisu](https://github.com/iris-out/naisu) 에서 최신 버전 배포중입니다.
+
+
+
+
+
+
+--# NaiThiefRemover: NovelAI 이미지 안전 다운로더--
 
 ![NaiThiefRemover](r1.png)
 ![NaiThiefRemover](r2.png)
